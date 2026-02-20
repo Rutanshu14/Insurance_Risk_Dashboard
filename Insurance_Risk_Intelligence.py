@@ -1,15 +1,17 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from utils.risk_engine import compute_risk_metrics
 from utils.executive_report import generate_executive_report
 
-st.set_page_config(layout="wide")
-
-# ---------------- SESSION STATE ----------------
-if "entered" not in st.session_state:
-    st.session_state.entered = False
+st.set_page_config(
+    page_title="Insurance Risk Intelligence",
+    layout="wide"
+)
 
 # ---------------- HIDE STREAMLIT UI ----------------
 st.markdown("""
@@ -20,114 +22,67 @@ header {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- GLOBAL UI ----------------
+# ---------------- CUSTOM UI ----------------
 st.markdown("""
 <style>
 
-.main {
-    background: linear-gradient(135deg, #F5F7FA, #FFFFFF);
-}
-
-/* LANDING PAGE */
-.landing-container {
-    padding: 80px 40px;
-    border-radius: 28px;
-    background: linear-gradient(135deg, #020024, #090979, #00C6FF);
-    color: white;
-    text-align: center;
-    margin-top: 40px;
-}
-
-.landing-title {
-    font-size: 48px;
-    font-weight: 700;
-}
-
-.landing-subtitle {
-    font-size: 20px;
-    opacity: 0.9;
-}
-
-/* DASHBOARD */
 .hero {
-    padding: 50px;
-    border-radius: 22px;
+    padding: 45px;
+    border-radius: 20px;
     background: linear-gradient(135deg, #0E4C92, #08306B);
     color: white;
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
 .glass-card {
     background: white;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+    padding: 22px;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
     border: 1px solid rgba(0,0,0,0.05);
-}
-
-.story-card {
-    background: white;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.08);
-    border-left: 6px solid #0E4C92;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- LANDING PAGE 🔥 ----------------
-if not st.session_state.entered:
+# ---------------- LOAD DATA ----------------
+df = pd.read_csv("data/insurers.csv")
+sentiment_df = pd.read_csv("data/sentiment.csv")
 
-    st.markdown("""
-    <div class="landing-container">
-        <div class="landing-title">
-            Insurance Risk Intelligence Platform
-        </div>
-        <div class="landing-subtitle">
-            Integrated Complaint • Sentiment • Early Warning Analytics
-        </div>
-        <br><br>
-        <div style="font-size:18px;">
-            Predict Risk • Detect Signals • Protect Reputation
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+risk_df = compute_risk_metrics(df, sentiment_df)
 
-    st.write("")
-    st.write("")
+# ---------------- SIDEBAR NAVIGATION 🔥 ----------------
+st.sidebar.markdown("## Insurance Risk Intelligence")
 
-    col1, col2, col3 = st.columns(3)
+page = st.sidebar.radio(
+    "Navigation",
+    [
+        "Executive Summary",
+        "Risk Heatmap",
+        "Regime Classification",
+        "Probability Forecast",
+        "Company Comparison",
+        "Regulator View"
+    ]
+)
 
-    col1.markdown("📊 **Risk Diagnostics**<br>Complaint & servicing variability modelling", unsafe_allow_html=True)
-    col2.markdown("🚨 **Early Warning System**<br>Forward-looking instability detection", unsafe_allow_html=True)
-    col3.markdown("💬 **Sentiment Intelligence**<br>Behavioural risk pressure analysis", unsafe_allow_html=True)
+# ---------------- HERO ----------------
+st.markdown("""
+<div class="hero">
+gnostic">
+    <h1>Insurance Risk Intelligence Platform</h1>
+    <p>Integrated Complaint • Sentiment • Early Warning Analytics</p>
+</div>
+""", unsafe_allow_html=True)
 
-    st.write("")
-    st.write("")
+# =====================================================
+# ✅ EXECUTIVE SUMMARY
+# =====================================================
+if page == "Executive Summary":
 
-    if st.button("Enter Intelligence Platform 🔥"):
-        st.session_state.entered = True
-        st.rerun()
+    st.subheader("📊 Executive Summary")
 
-# ---------------- MAIN DASHBOARD ----------------
-else:
-
-    df = pd.read_csv("data/insurers.csv")
-    sentiment_df = pd.read_csv("data/sentiment.csv")
-
-    risk_df = compute_risk_metrics(df, sentiment_df)
-
-    # HERO (Different from Landing)
-    st.markdown("""
-    <div class="hero">
-        <h1>Insurance Risk Intelligence Platform</h1>
-        <p>Integrated Complaint • Sentiment • Early Warning Analytics</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # KPI STRIP
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
@@ -138,61 +93,117 @@ else:
 
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.divider()
+# =====================================================
+# ✅ RISK HEATMAP 🔥
+# =====================================================
+elif page == "Risk Heatmap":
 
-    # COMPANY SELECTION
-    st.subheader("🎯 Insurer Risk Diagnostic")
+    st.subheader("🔥 Cross-Insurer Risk Heatmap")
 
-    selected_company = st.selectbox("Select Insurer", risk_df.index)
+    heatmap_cols = ["Complaints", "Negative Sentiment %", "Reputation Risk Index"]
 
-    complaints = risk_df.loc[selected_company,'Complaints']
-    sentiment = risk_df.loc[selected_company,'Negative Sentiment %']
-    risk_index = risk_df.loc[selected_company,'Reputation Risk Index']
-    ews_score = risk_df.loc[selected_company,'EWS Score']
+    fig, ax = plt.subplots()
 
-    col1, col2, col3 = st.columns(3)
-
-    col1.metric("Complaints", f"{complaints:,.0f}")
-    col2.metric("Negative Sentiment", f"{sentiment:.2%}")
-    col3.metric("Risk Index", f"{risk_index:,.1f}")
-
-    st.divider()
-
-    # RISK REGIME
-    if ews_score > 1.25:
-        regime = "🔴 Elevated Risk"
-    elif ews_score > 0.75:
-        regime = "🟡 Watchlist"
-    else:
-        regime = "🟢 Stable"
-
-    st.metric("Risk Regime", regime)
-
-    st.divider()
-
-    # EWS CHART
-    st.subheader("🚨 Early Warning System")
-
-    ews_fig = px.bar(
-        risk_df,
-        x=risk_df.index,
-        y="EWS Score",
-        color="EWS Score",
-        color_continuous_scale="RdYlGn_r"
+    sns.heatmap(
+        risk_df[heatmap_cols],
+        cmap="RdYlGn_r",
+        ax=ax
     )
 
-    st.plotly_chart(ews_fig, use_container_width=True)
+    ax.set_title("Industry Risk Profile")
 
-    st.divider()
+    st.pyplot(fig)
 
-    # EXECUTIVE REPORT
-    st.subheader("📄 Executive Consulting Report")
+# =====================================================
+# ✅ REGIME CLASSIFICATION 🚦
+# =====================================================
+elif page == "Regime Classification":
 
-    report = generate_executive_report(selected_company, risk_df)
+    st.subheader("🚦 Risk Regime Classification")
+
+    regime_df = risk_df.copy()
+
+    regime_df["Regime"] = regime_df["EWS Score"].apply(
+        lambda x: "Elevated Risk" if x > 1.25
+        else "Watchlist" if x > 0.75
+        else "Stable"
+    )
+
+    regime_fig = px.bar(
+        regime_df,
+        x=regime_df.index,
+        y="EWS Score",
+        color="Regime",
+        color_discrete_map={
+            "Stable": "green",
+            "Watchlist": "orange",
+            "Elevated Risk": "red"
+        }
+    )
+
+    st.plotly_chart(regime_fig, use_container_width=True)
+
+# =====================================================
+# ✅ PROBABILITY FORECAST 📈
+# =====================================================
+elif page == "Probability Forecast":
+
+    st.subheader("📈 Probability Forecast")
+
+    st.info("Forecast simulation (placeholder for Prophet / ML model)")
+
+    forecast_values = risk_df["Reputation Risk Index"] + np.random.normal(0, 5, len(risk_df))
+
+    forecast_fig = px.line(
+        x=risk_df.index,
+        y=forecast_values,
+        markers=True
+    )
+
+    st.plotly_chart(forecast_fig, use_container_width=True)
+
+# =====================================================
+# ✅ COMPANY COMPARISON 📊
+# =====================================================
+elif page == "Company Comparison":
+
+    st.subheader("📊 Company Comparison")
+
+    comparison_metric = st.selectbox(
+        "Select Metric",
+        ["Complaints", "Negative Sentiment %", "Reputation Risk Index"]
+    )
+
+    comp_fig = px.bar(
+        risk_df,
+        x=risk_df.index,
+        y=comparison_metric,
+        color=comparison_metric,
+        color_continuous_scale="Blues"
+    )
+
+    st.plotly_chart(comp_fig, use_container_width=True)
+
+# =====================================================
+# ✅ REGULATOR VIEW 🏛
+# =====================================================
+elif page == "Regulator View":
+
+    st.subheader("🏛 Regulator Risk Monitoring View")
+
+    high_risk = risk_df[risk_df["EWS Score"] > 1.25]
+
+    st.markdown("### 🔴 Elevated Risk Insurers")
+
+    st.dataframe(high_risk)
+
+    st.markdown("### 📄 Generate Industry Report")
+
+    report = generate_executive_report("Industry Overview", risk_df)
 
     st.download_button(
-        label="Download Executive Report",
+        label="Download Industry Report",
         data=report,
-        file_name=f"{selected_company}_Executive_Report.pdf",
+        file_name="Industry_Risk_Report.pdf",
         mime="application/pdf"
     )
